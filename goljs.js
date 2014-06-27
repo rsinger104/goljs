@@ -132,12 +132,12 @@ var goljs = new function() {
       yoabove = -1;
     }
     if (x == (gol.WIDTH - 1)) {
-      xoright = 0;
+      xoright = -(gol.WIDTH-1);
     } else {
       xoright = 1;
     }
     if (y == (gol.HEIGHT-1)) {
-      yobelow = 0;
+      yobelow = -(gol.HEIGHT-1);
     } else {
       yobelow = 1;
     }
@@ -173,12 +173,12 @@ var goljs = new function() {
       yoabove = -1;
     }
     if (x == (gol.WIDTH-1)) {
-      xoright = 0;
+      xoright = -(gol.WIDTH-1);
     } else {
       xoright = 1;
     }
     if (y == (gol.HEIGHT-1)) {
-      yobelow = 0;
+      yobelow = -(gol.HEIGHT-1);
     } else {
       yobelow = 1;
     }
