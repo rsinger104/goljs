@@ -70,6 +70,7 @@ var goljs = new function() {
 
     cell_row:
     for(y = 0; y < gol.HEIGHT;y++) { // repeat for each row of cells
+      console.log("Processing row: " + (y+1));
       x = 0;
       do {
         while(gol.grid[y][x] == 0) { // skip as many blank cells in this row as possible
@@ -87,7 +88,7 @@ var goljs = new function() {
           alivecount++;
           if((count < gol.minimum) || (count > gol.maximum)) {
             // Live cell that needs to die
-            //console.log("Cell Off: " + y + ":" + x + ">" + count);
+            console.log("Cell Off: " + (y+1) + ":" + (x+1) + ">" + count);
             gol.clearCell(y, x);
             alivecount--;
           }
@@ -230,7 +231,6 @@ var goljs = new function() {
           gol.context.fillStyle = "#000";
         } else {
           gol.context.fillStyle = "#00F4FF";
-          //context.clearRect();
         }
         gol.context.fillRect(
           x * gol.CELL_SIZE +1,
@@ -411,9 +411,13 @@ var goljs = new function() {
 
       this.canvasOnClickHandler = function(event) {
         var cell = gol.getCursorPosition(event);
-        var state = gol.grid[cell.row][cell.column]
-          == gol.ALIVE ? gol.DEAD : gol.ALIVE;
-        gol.grid[cell.row][cell.column] = state;
+        gol.copyGrid(gol.grid,gol.nextGenGrid);
+        if(gol.grid[cell.row][cell.column] & 0x01) {
+          gol.clearCell(cell.row,cell.column);
+        }  else {
+          gol.setCell(cell.row,cell.column);
+        }
+        gol.copyGrid(gol.nextGenGrid,gol.grid);
         gol.updateAnimations();
       };
 
