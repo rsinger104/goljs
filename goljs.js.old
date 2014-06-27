@@ -35,8 +35,8 @@ var goljs = new function() {
   this.WIDTH = Math.floor(this.X / this.CELL_SIZE);
   this.HEIGHT = Math.floor(this.Y / this.CELL_SIZE);
   console.log("W:" + this.WIDTH + "H:" + this.HEIGHT);
-  //this.DEAD = 0;
-  //this.ALIVE = 1;
+  this.DEAD = 0;
+  this.ALIVE = 1;
   this.DELAY = 500; // delay in ms
 
   // State variables
@@ -54,18 +54,50 @@ var goljs = new function() {
   this.cells = 0; // peak cell count
   this.minCells = 0; // min live cell count
   this.counter = 0; // Generation count
-
 /**
- * name - nextGenCells
- * desc - using bitwise operators find neighbor counts for each cell and determine whether it should
- *   be alive or dead.  Then copy the nextGenGrid back to the main Grid for display
+ * name - updateState
+ * desc - find alive/dead cells for nextgen and copy to grid for next pass
  * arguments - none
  * return - none
  */
+  this.updateState = function() {
+    var neighbors;
+    gol.nextGenGrid = [];
+    gol.nextGenGrid = Array.matrix(gol.HEIGHT, gol.WIDTH, 0);
+    var alivecount = 0;
+
+    for (var h = 0; h < gol.HEIGHT; h++) {
+      for (var w = 0; w < gol.WIDTH; w++) {
+        neighbors = gol.calculateNeighbors(h, w);
+        if (gol.grid[h][w] !== gol.DEAD) {
+          if ((neighbors >= gol.minimum) &&
+            (neighbors <= gol.maximum)) {
+              gol.nextGenGrid[h][w] = gol.ALIVE;
+              alivecount++;
+          }
+        } else {
+          if (neighbors === gol.spawn) {
+            gol.nextGenGrid[h][w] = gol.ALIVE;
+            alivecount++;
+          }
+        }
+      }
+    }
+    gol.copyGrid(gol.nextGenGrid, gol.grid);
+    gol.counter++;
+    if(alivecount > gol.cells) {
+      gol.cells = alivecount;
+    }
+    if(alivecount < gol.minCells) {
+      gol.minCells = alivecount;
+    }
+  };
+
   this.nextGenCells = function() {
     var x, y, count;
     var alivecount = 0;
-    gol.nextGenGrid = Array.matrix(gol.HEIGHT, gol.WIDTH, 0);
+    gol.nextGenGrid = [];
+    gol.nextGenGrid = Array.matrix(this.HEIGHT, this.WIDTH, 0);
     gol.copyGrid(gol.grid,gol.nextGenGrid);
 
     cell_row:
@@ -74,7 +106,7 @@ var goljs = new function() {
       do {
         while(gol.grid[y][x] == 0) { // skip as many blank cells in this row as possible
           x++;
-          if(x >= (gol.WIDTH - 1)) {
+          if(x >= gol.WIDTH) {
             continue cell_row;
           } // if the whole row is blank skip to the next
         }
@@ -86,7 +118,6 @@ var goljs = new function() {
           // Cell is on: turn it off if it doesn't have 2/3 neighbors
           alivecount++;
           if((count < gol.minimum) || (count > gol.maximum)) {
-            // Live cell that needs to die
             //console.log("Cell Off: " + y + ":" + x + ">" + count);
             gol.clearCell(y, x);
             alivecount--;
@@ -112,16 +143,11 @@ var goljs = new function() {
     }
   };
 
-/**
- * name - clearCell
- * desc - using bitwise operators set cell to dead and decrement counter for all neighbor cells
- * arguments - y (height index of cell); x (width index of cell) in grid matrix
- * return - none
- */
+
   this.clearCell = function(y, x) {
     var xoleft, xoright, yoabove, yobelow;
     if(x == 0) {
-      xoleft = gol.WIDTH - 1;
+      xoleft = gol.WIDTH;
     } else {
       xoleft = -1;
     }
@@ -130,7 +156,7 @@ var goljs = new function() {
     } else {
       yoabove = -1;
     }
-    if (x == (gol.WIDTH - 1)) {
+    if (x == (gol.WIDTH)) {
       xoright = 0;
     } else {
       xoright = 1;
@@ -153,12 +179,6 @@ var goljs = new function() {
 
   };
 
-/**
- * name - setCell
- * desc - using bitwise operators set cell to alive and increment counter for all neighbor cells
- * arguments - y (height index of cell); x (width index of cell) in grid matrix
- * return - none
- */
   this.setCell = function(y, x) {
     var xoleft, xoright, yoabove, yobelow;
     if(x == 0) {
@@ -194,6 +214,28 @@ var goljs = new function() {
 
   };
 
+
+/**
+ * name - calculateNeighbors
+ * desc - count living neighbors for cell-n
+ * arguments - x & y coordinates of cell-n
+ * return - number of living neighbors for cell-n
+ */
+  this.calculateNeighbors = function(y, x) {
+    var total = (gol.grid[y][x] !== gol.DEAD) ? -1 : 0;
+
+    for (var h = -1; h <= 1; h++) {
+      for (var w = -1; w <= 1; w++) {
+        if (gol.grid
+          [(gol.HEIGHT + (y + h)) % gol.HEIGHT]
+          [(gol.WIDTH + (x + w)) % gol.WIDTH] !== gol.DEAD) {
+              total++;
+        }
+      }
+    }
+    return total;
+  };
+
 /**
  * name - copyGrid
  * desc - copy source grid array to destination grid array
@@ -213,6 +255,7 @@ var goljs = new function() {
  * return - none
  */
   this.update = function() {
+//    gol.updateState();
     gol.nextGenCells();
     gol.updateAnimations();
   };
@@ -224,17 +267,17 @@ var goljs = new function() {
  * return - none
  */
   this.updateAnimations = function() {
-    for (var y = 0; y < gol.HEIGHT; y++) {
-      for (var x = 0; x < gol.WIDTH; x++) {
-        if (gol.grid[y][x] & 0x01) {
+    for (var h = 0; h < gol.HEIGHT; h++) {
+      for (var w = 0; w < gol.WIDTH; w++) {
+        if (gol.grid[h][w] & 0x01) {
           gol.context.fillStyle = "#000";
         } else {
           gol.context.fillStyle = "#00F4FF";
           //context.clearRect();
         }
         gol.context.fillRect(
-          x * gol.CELL_SIZE +1,
-          y * gol.CELL_SIZE +1,
+          w * gol.CELL_SIZE +1,
+          h * gol.CELL_SIZE +1,
           gol.CELL_SIZE -1,
           gol.CELL_SIZE -1);
       }
@@ -253,40 +296,6 @@ var goljs = new function() {
   this.Cell = function(row, column) {
     this.row = row;
     this.column = column;
-  };
-
-/**
- * name - randomStart
- * desc - generate random number of cells in the matrix, at least the max cell count rule
- * arguments - seed is an optional variable (and currently unused)
- * return - int number of cells generated
- */
-  this.randomStart = function(seed) {
-  seed = typeof seed !== 'undefined' ? seed : Math.floor((Math.random() * 1000) + 1);
-    // Determine max # of cells, we can't generate more than that...
-   var max = gol.WIDTH * gol.HEIGHT;
-   var count = 0;
-   var neighbors = 0;
-   gol.nextGenGrid = Array.matrix(gol.HEIGHT, gol.WIDTH, 0);
-    // Generate random # of cells based on max & seed
-   gol.cells = Math.floor((Math.random() * max + 1));
-
-    // Loop through array and populate random number of cells up to max
-    for (var y = 0; y < gol.HEIGHT; y++) {
-      for (var x = 0; x < gol.WIDTH; x++) {
-        if((Math.round(Math.random()) == 1) && (count <= gol.cells)) {
-          neighbors = gol.nextGenGrid[y][x] >> 1; // # of neighboring on-cells
-          if(neighbors <= gol.maximum) {
-              gol.setCell(y,x);
-              count++;
-          }
-        }
-      }
-    }
-    gol.copyGrid(gol.nextGenGrid, gol.grid);
-    gol.cells = count;
-    gol.minCells = count;
-    return gol.cells;
   };
 
 /*********************************************************************
@@ -384,6 +393,60 @@ var goljs = new function() {
     gol.spawn = gol.spawnSelect.value;
   };
 
+  this.setOptions = function() {
+    gol.CELL_SIZE = 8;
+    gol.X = 320;
+    gol.Y = 320;
+    gol.WIDTH = Math.floor(gol.X / gol.CELL_SIZE);
+    gol.HEIGHT = Math.floor(gol.Y / gol.CELL_SIZE);
+    gol.DEAD = 0;
+    gol.ALIVE = 1;
+    gol.DELAY = 500; // delay in ms
+
+    // State variables
+    gol.STOPPED = 0;
+    gol.RUNNING = 1;
+    gol.state = gol.STOPPED; // current state
+    gol.interval = null;
+
+    gol.minimum = 2;
+    gol.maximum = 3;
+    gol.spawn = 3;
+
+    gol.grid = Array.matrix(gol.HEIGHT, gol.WIDTH, 0);
+
+    gol.counter = 0;
+  };
+
+  this.randomStart = function(seed) {
+    seed = typeof seed !== 'undefined' ? seed : Math.floor((Math.random() * 1000) + 1);
+    // Determine max # of cells, we can't generate more than that...
+   var max = gol.WIDTH * gol.HEIGHT;
+   var count = 0;
+   var neighbors = 0;
+   gol.nextGenGrid = [];
+   gol.nextGenGrid = Array.matrix(this.HEIGHT, this.WIDTH, 0);
+    // Generate random # of cells based on max & seed
+   gol.cells = Math.floor((Math.random() * max + 1));
+
+    // Loop through array and populate random number of cells up to max
+    for (var y = 0; y <= gol.HEIGHT; y++) {
+      for (var x = 0; x <= gol.WIDTH; x++) {
+        if((Math.round(Math.random()) == 1) && (count <= gol.cells)) {
+          neighbors = gol.nextGenGrid[y][x] >> 1; // # of neighboring on-cells
+          if(neighbors <= gol.maximum) {
+              gol.setCell(y,x);
+              count++;
+          }
+        }
+      }
+    }
+    gol.copyGrid(gol.nextGenGrid, gol.grid);
+    gol.cells = count;
+    gol.minCells = count;
+    return gol.cells;
+  };
+
 /****************************************************************************************************
 **
  * Initialize html5 canvas object along with DOM events
@@ -392,7 +455,7 @@ var goljs = new function() {
  */
 
 
-  this.initialize = function() {
+
     if (this.gridCanvas.getContext) {
 
       this.context = this.gridCanvas.getContext('2d');
@@ -452,7 +515,7 @@ var goljs = new function() {
     } else {
       alert("HTML5 Canvas is required to run The Game of Life - Rally Code Test. Please enable HTML5 capabilities or use another browser, such as Safari or Chrome.");
     }
-  };
 
 };
-goljs.initialize();
+
+alert(3 & 0x01);
